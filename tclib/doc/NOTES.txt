@@ -1,0 +1,62 @@
+
+Notes on streeteasy scraper for TriBeCa citizen:
+
+My test blog:
+
+username: antonyac
+password: (gateway pw)
+
+http://www.wordpress.com
+blog: antspaceblog
+
+blog url:
+http://antspaceblog.wordpress.com/
+
+CSS classes we need:
+
+'item compact closing even first'
+'item_inner'
+'photo'
+img.class='tiny'
+'more'
+'closer'
+
+My StreetEasy API key:
+
+1d77430bcb9c2d750c73691e2f3210528d338549
+
+------------
+
+TC login:
+
+User: tribecacitizen 
+Password: madonna
+
+==========
+
+URL for exported XML for recorded sales in last 7 days from streeteasy (under "more" top level menu):
+
+http://streeteasy.com/nyc/closings/rss/area:105%7Crecorded%3C7?t=1125016%3A43ec24d4d7d1b990
+
+URL for exported TSV:
+
+http://streeteasy.com/nyc/process/closings/xls/area:105%7Crecorded%3C7
+
+
+===========
+
+Example of Current TC "Recent Real Estate Sales in Tribeca" page:
+
+http://tribecacitizen.com/2012/08/25/recent-real-estate-sales-in-tribeca-46/
+
+=============
+Using wget to login with cookies:
+See: http://stackoverflow.com/questions/1324421/how-to-get-past-the-login-page-with-wget
+
+wget command to log in and save cookies:
+
+wget --keep-session-cookies --no-check-certificate --save-cookies cookies.txt --post-data 'do_login=true&remember=true&login=tribecacitizen&password=madonna&do_login=login+%C2+%BB' https://streeteasy.com/nyc/user/login
+
+wget command to fetch content using saved session cookie:
+wget --keep-session-cookies --load-cookies cookies.txt http://streeteasy.com/nyc/closing/3067761
+

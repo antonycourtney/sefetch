@@ -1,0 +1,44 @@
+@( fa: tc.FetchArgs )
+
+@import helper._
+@import tc.SETransform
+
+@main("Tribeca Citizen StreetEasy Sales Report") {
+    <h1>Tribeca Citizen / StreetEasy Sales Report</h1>
+
+    <p>Welcome to the Tribeca Citizen / StreetEasy Sales Report!</p>
+
+    <p>@SETransform.testString </p>
+
+    <p>
+    Time Period: 
+        <select name="Time Period">
+            <option value="PastWeek">Past Week</option> 
+            <option disabled=true value="Custom">Custom...</option>
+        </select>
+    </p>
+
+    <p>Available Actions:
+        <br/>
+
+    <ul>
+    	<li>
+    		@form(routes.Application.previewCurrent()) {
+    			<input type="submit" value="Preview Sales Report"> for @fa.fmtInterval
+    		}
+    	</li>
+    	<li>
+    		@form(routes.Application.downloadWPCurrent()) {
+    			<input type="submit" value="Download WordPress-ready Sales Report"> for @fa.fmtInterval
+    		}
+		</li>
+        <li>
+            @form(routes.Application.viewWPCurrent()) {
+                <input type="submit" value="View WordPress-ready Raw HTML Sales Report">
+                for @fa.fmtInterval
+                ( Copy and paste into WordPress editor to post )
+            }
+        </li>
+	</ul>
+    </p>
+}
