@@ -205,14 +205,15 @@ package tc {
 
       // login to streetEasy and save the cookie...
       def seLogin( wd: java.io.File ) = {
-        val cmd = "wget --keep-session-cookies --no-check-certificate --save-cookies cookies.txt -O login.out --post-data 'do_login=true&remember=true&login=tribecacitizen&password=madonna&do_login=login+%C2+%BB' https://streeteasy.com/nyc/user/login"
-        
+        // val cmd = "wget --keep-session-cookies --no-check-certificate --save-cookies cookies.txt -O login.out --post-data 'do_login=true&remember=true&login=tribecacitizen&password=madonna&do_login=login+%C2+%BB' https://streeteasy.com/nyc/user/login"
+        val cmd = "curl --cookie-jar logincookies.txt -o login-output.txt --data 'do_login=true&remember=true&login=tribecacitizen&password=madonna&do_login=login+%C2+%BB' https://streeteasy.com/nyc/user/login"
         runCmd( wd, cmd )
       }
 
       def seFetchURI( wd: java.io.File, uri: String, dstFile: String = "" ) = {
-        val dstArg = if( dstFile.length > 0 ) ( "-O " + dstFile ) else ""
-        val template = "wget --keep-session-cookies --no-check-certificate --load-cookies cookies.txt %s %s"
+        val dstArg = if( dstFile.length > 0 ) ( "-o " + dstFile ) else ""
+        // val template = "wget --keep-session-cookies --no-check-certificate --load-cookies cookies.txt %s %s"
+        val template = "curl --cookie logincookies.txt %s %s"
 
         val cmd = String.format( template, dstArg, uri )
 
