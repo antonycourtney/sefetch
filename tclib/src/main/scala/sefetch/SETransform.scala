@@ -11,7 +11,7 @@ package tc {
       def createTempDir(): java.io.File = {
         import java.io._
 
-        val tmpBaseDir = "/Users/antony/tmp"
+        val tmpBaseDir = "/tmp"
         
         // let's always just use the same directory for a given rundate:
         val dt = new java.util.Date()
