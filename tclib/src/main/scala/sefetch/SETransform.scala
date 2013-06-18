@@ -173,9 +173,9 @@ package tc {
       }
 
       // saveResults -- save the XHTML for the resulting document
-      def saveResults( destFile: String, doc: scala.xml.Elem, writeDocType: Boolean = true ) = {
-        // val w = new java.io.FileWriter( destFile )
-        val w = new java.io.PrintWriter( destFile, "UTF-8" )
+      def saveResults( dstPath: String, doc: scala.xml.Elem, writeDocType: Boolean = true ) = {
+        // val w = new java.io.FileWriter( dstPath )
+        val w = new java.io.PrintWriter( dstPath, "UTF-8" )
         val doctype: scala.xml.dtd.DocType = 
           if( writeDocType ) scala.xml.dtd.DocType("html",
                                                    scala.xml.dtd.PublicID("-//W3C//DTD XHTML 1.0 Strict//EN",
@@ -183,7 +183,7 @@ package tc {
                                                    Nil) else null
         xml.XML.write( w, doc, "UTF-8", xmlDecl = false, doctype = doctype )
         w.close()
-        // scala.xml.XML.save( destFile, docTemplate, /* xmlDecl = true, */ enc = "utf-8" )
+        // scala.xml.XML.save( dstPath, docTemplate, /* xmlDecl = true, */ enc = "utf-8" )
       }
 
       def runCmd( wd: java.io.File, cmd: String ) = {
@@ -231,116 +231,132 @@ package tc {
         println( testString )
 
         val wdir = createTempDir()
-
-        val inDir = new File( wdir.getAbsolutePath() + "/in" );
-        inDir.mkdir()  // don't worry if it exists!
-        val inDirPath = inDir.getAbsolutePath()
-
         val outDir = new File( wdir.getAbsolutePath() + "/out" );
-        outDir.mkdir() // don't worry if it exists
         val outDirPath = outDir.getAbsolutePath()
-        
-        println( "Created temp dir " + wdir.getAbsolutePath() )
+        val previewPath = outDirPath + "/out.xhtml"
+        val wpPath = outDirPath + "/wp.xhtml"        
+        val completionMarkerPath = outDirPath + "/doneMarker.txt"
+        val completionMarker = new File( completionMarkerPath )
 
-        // log in:
-        seLogin( inDir )
+        def doFullFetch() = {
+          val inDir = new File( wdir.getAbsolutePath() + "/in" );
+          inDir.mkdir()  // don't worry if it exists!
+          val inDirPath = inDir.getAbsolutePath()
 
-        // fetch the TSV file:
-        val tsvURI = "http://streeteasy.com/nyc/process/closings/xls/area:105%7Crecorded%3C7"
-        val tsvFile = "recorded-sales.tsv" 
-        seFetchURI( inDir, tsvURI, tsvFile )
-
-        // fetch the RSS XML file:
-        val rssURI = "http://streeteasy.com/nyc/closings/rss/area:105%7Crecorded%3C7?t=1125016%3A43ec24d4d7d1b990"
-        val rssXmlFile = "recorded-sales-rss.xml"
-        seFetchURI( inDir, rssURI, rssXmlFile )
-
-        // read the TSV file we get from exporting:
-        val tsvSrcLines = scala.io.Source.fromFile( inDirPath + "/" + tsvFile ).getLines()
-        println( "read listings from " + tsvFile )
-
-        // read the XML file we get from RSS:
-        val xmlListingsElem = scala.xml.XML.loadFile( inDirPath + "/" + rssXmlFile )
-        println( "read listings from " + rssXmlFile )
-
-        // extract guid and img pair from the specified item
-        def getGuidAndImg( item: scala.xml.Node ) : (String, scala.xml.NodeSeq) = {
-            val guidStr = (item \ "guid").text
-
-            // REALLY annoying but the content in description is an HTML fragment that
-            // we have to clean and re-parse.  yuck!
-            // FIXME:  Now that we're using jsoup anyway, should probably just use that here...
-            val descStr = (item \ "description").text.replaceAll("&","")
-            // println( "Description: " + descStr )
-            val descElem = scala.xml.XML.loadString( "<fragment>" + descStr + "</fragment>" )
-
-            // img in RSS feed, which is bigger than we want
-            val xmlImgElem = descElem \ "img" 
-            val imgSrc = xmlImgElem \ "@src"
+          outDir.mkdir() // don't worry if it exists
           
-            val imgElem = <img class="tiny" src={imgSrc} width="48" height="48" border="0" />
+          println( "Created temp dir " + wdir.getAbsolutePath() )
 
-            ( guidStr, imgElem )
-        }
+          // log in:
+          seLogin( inDir )
 
-        val listingItems = xmlListingsElem \\ "item"
-        val listingEnts = listingItems.map( getGuidAndImg )
+          // fetch the TSV file:
+          val tsvURI = "http://streeteasy.com/nyc/process/closings/xls/area:105%7Crecorded%3C7"
+          val tsvFile = "recorded-sales.tsv" 
+          seFetchURI( inDir, tsvURI, tsvFile )
 
-        // Construct a Map from GUID string (really the URI) to img element
-        val listImgMap = listingEnts.toMap
+          // fetch the RSS XML file:
+          val rssURI = "http://streeteasy.com/nyc/closings/rss/area:105%7Crecorded%3C7?t=1125016%3A43ec24d4d7d1b990"
+          val rssXmlFile = "recorded-sales-rss.xml"
+          seFetchURI( inDir, rssURI, rssXmlFile )
 
-        // Now let's fetch the closing entries for all the GUIDs:
-        val listingURIs = listingEnts.map( _._1 )
+          // read the TSV file we get from exporting:
+          val tsvSrcLines = scala.io.Source.fromFile( inDirPath + "/" + tsvFile ).getLines()
+          println( "read listings from " + tsvFile )
 
-        val lmapEnts = scala.collection.mutable.ArrayBuffer.empty[ ( String, String ) ]
+          // read the XML file we get from RSS:
+          val xmlListingsElem = scala.xml.XML.loadFile( inDirPath + "/" + rssXmlFile )
+          println( "read listings from " + rssXmlFile )
 
-        for( uri <- listingURIs ) {
-          val baseID = uri.substring( uri.lastIndexOf( '/' ) + 1 )
-          val saleDocFileName = baseID + ".html"
-          seFetchURI( inDir, uri, saleDocFileName )
+          // extract guid and img pair from the specified item
+          def getGuidAndImg( item: scala.xml.Node ) : (String, scala.xml.NodeSeq) = {
+              val guidStr = (item \ "guid").text
 
-          // now let's try and pick out the listing component and get to the basic listing:
-          val saleDocFile = new File( inDir + "/" + saleDocFileName )
-          
-          println( "extracting public listing from " + saleDocFileName )
-          try {
-            val saleDoc = Jsoup.parse( saleDocFile, "utf-8" )
-            val listingElem = saleDoc.getElementsByClass( "listing" ).first()
-            val linkElem = listingElem.getElementsByTag( "a" ).first()
-            val linkHRef = linkElem.attr("href")
-            val publicURI = "http://streeteasy.com" + linkHRef
+              // REALLY annoying but the content in description is an HTML fragment that
+              // we have to clean and re-parse.  yuck!
+              // FIXME:  Now that we're using jsoup anyway, should probably just use that here...
+              val descStr = (item \ "description").text.replaceAll("&","")
+              // println( "Description: " + descStr )
+              val descElem = scala.xml.XML.loadString( "<fragment>" + descStr + "</fragment>" )
 
-            println( "public URI: " + publicURI )
+              // img in RSS feed, which is bigger than we want
+              val xmlImgElem = descElem \ "img" 
+              val imgSrc = xmlImgElem \ "@src"
             
-            lmapEnts += Tuple2( uri, publicURI )
-          } catch {
-            case x : Throwable => println( "Caught exception while extracting public listing, ignoring..." )
+              val imgElem = <img class="tiny" src={imgSrc} width="48" height="48" border="0" />
+
+              ( guidStr, imgElem )
           }
 
+          val listingItems = xmlListingsElem \\ "item"
+          val listingEnts = listingItems.map( getGuidAndImg )
+
+          // Construct a Map from GUID string (really the URI) to img element
+          val listImgMap = listingEnts.toMap
+
+          // Now let's fetch the closing entries for all the GUIDs:
+          val listingURIs = listingEnts.map( _._1 )
+
+          val lmapEnts = scala.collection.mutable.ArrayBuffer.empty[ ( String, String ) ]
+
+          for( uri <- listingURIs ) {
+            val baseID = uri.substring( uri.lastIndexOf( '/' ) + 1 )
+            val saleDocFileName = baseID + ".html"
+            seFetchURI( inDir, uri, saleDocFileName )
+
+            // now let's try and pick out the listing component and get to the basic listing:
+            val saleDocFile = new File( inDir + "/" + saleDocFileName )
+            
+            println( "extracting public listing from " + saleDocFileName )
+            try {
+              val saleDoc = Jsoup.parse( saleDocFile, "utf-8" )
+              val listingElem = saleDoc.getElementsByClass( "listing" ).first()
+              val linkElem = listingElem.getElementsByTag( "a" ).first()
+              val linkHRef = linkElem.attr("href")
+              val publicURI = "http://streeteasy.com" + linkHRef
+
+              println( "public URI: " + publicURI )
+              
+              lmapEnts += Tuple2( uri, publicURI )
+            } catch {
+              case x : Throwable => println( "Caught exception while extracting public listing, ignoring..." )
+            }
+
+          }
+          // map private to public URIs:
+          val pubLinkMap = lmapEnts.toArray.toMap
+
+          val entries = parseListings( tsvSrcLines )
+          val xmlEntries = entries map ( entryToXML( listImgMap, pubLinkMap, _ ) )
+
+          val bodyContent = makeBodyContent( xmlEntries )
+
+          println( "Writing body content to " + wpPath );
+          saveResults( wpPath, bodyContent, false )
+
+          val resDoc = makeHtmlDoc( bodyContent )
+
+          println( "Writing full XHTML output to " + previewPath );
+          // println( resDoc );
+
+          saveResults( previewPath, resDoc )
+
+          // and dump the rss file in there:
+          val rssCpCmd = String.format( "cp listings-subset.css %s", outDirPath )
+          runCmd( new File( "." ), rssCpCmd )
+
+          // And create completion marker:
+          println( "Creating " + completionMarkerPath )
+          completionMarker.createNewFile()
         }
-        // map private to public URIs:
-        val pubLinkMap = lmapEnts.toArray.toMap
 
-        val entries = parseListings( tsvSrcLines )
-        val xmlEntries = entries map ( entryToXML( listImgMap, pubLinkMap, _ ) )
-
-        val bodyContent = makeBodyContent( xmlEntries )
-        val destContentFile = outDirPath + "/wp.xhtml";
-        println( "Writing body content to " + destContentFile );
-        saveResults( destContentFile, bodyContent, false )
-
-        val resDoc = makeHtmlDoc( bodyContent )
-        val destFile = outDirPath + "/out.xhtml";
-        println( "Writing full XHTML output to " + destFile );
-        // println( resDoc );
-
-        saveResults( destFile, resDoc )
-
-        // and dump the rss file in there:
-        val rssCpCmd = String.format( "cp listings-subset.css %s", outDirPath )
-        runCmd( new File( "." ), rssCpCmd )
-
-        val res = new FetchResult( fa, pf = destFile, wpf = destContentFile )
+        if( completionMarker.exists() ) {
+          println( "Found completion marker, using previously cached results...")
+        } else {
+          println( "Cached results not available -- doing full refresh...." )
+          doFullFetch()
+        }
+        val res = new FetchResult( fa, pf = previewPath, wpf = wpPath )
 
         res
       }
