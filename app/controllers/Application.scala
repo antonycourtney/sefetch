@@ -24,17 +24,17 @@ object Application extends Controller {
  
   def previewCurrent = Action {
     val res = tc.SETransform.fetch( fa )
-    Ok.sendFile( new File( res.previewFile ), inline = true ).as("text/html")
+    Ok.sendFile( new File( res.previewFile ), inline = true ).as("text/html; charset=utf-8")
   }
 
   def downloadWPCurrent = Action {
     val res = tc.SETransform.fetch( fa )
-    Ok.sendFile( new File( res.wpFile ) )
+    Ok.sendFile( new File( res.wpFile ) ).as("text/plain; charset=utf-8")
   }
 
   def viewWPCurrent = Action {
     val res = tc.SETransform.fetch( fa )
-    Ok.sendFile( new File( res.wpFile ), inline = true ).as("text/plain")
+    Ok.sendFile( new File( res.wpFile ), inline = true ).as("text/plain; charset=utf-8")
   }  
 
   /*
