@@ -310,7 +310,7 @@ package tc {
             println( "extracting public listing from " + saleDocFileName )
             try {
               val saleDoc = Jsoup.parse( saleDocFile, "utf-8" )
-              val listingElem = saleDoc.getElementsByClass( "listing" ).first()
+              val listingElem = saleDoc.getElementsByClass( "right_half" ).first()
               val linkElem = listingElem.getElementsByTag( "a" ).first()
               val linkHRef = linkElem.attr("href")
               val publicURI = "http://streeteasy.com" + linkHRef
